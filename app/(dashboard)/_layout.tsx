@@ -1,10 +1,70 @@
+import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 
 const DashboardLayout = () => {
   return (
-    <>
-      <Tabs screenOptions={{ headerShown: false }} />
-    </>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: "#002147",
+        tabBarInactiveTintColor: "gray",
+        tabBarStyle: { backgroundColor: "#ffffff" },
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: "Home",
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons
+              name={focused ? "home" : "home-outline"}
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="map"
+        options={{
+          title: "Map",
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons
+              name={focused ? "location" : "location-outline"}
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="shop"
+        options={{
+          title: "Shop",
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons
+              name={focused ? "cart" : "cart-outline"}
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Profile",
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons
+              name={focused ? "person" : "person-outline"}
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+    </Tabs>
   );
 };
+
 export default DashboardLayout;
