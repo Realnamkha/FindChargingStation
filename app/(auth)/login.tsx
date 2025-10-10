@@ -9,20 +9,24 @@ import {
   TouchableWithoutFeedback,
 } from "react-native";
 import { useUser } from "../../hooks/useUser";
+import ThemedLoader from "../../components/ThemedLoader";
 
 const Login = () => {
   // State variables for login
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const { user, login } = useUser();
 
   const handleLogin = async () => {
+    setError(null);
     try {
       await login(email, password);
       console.log("Current user is:", user);
       // later -> send this data to your backend API
-    } catch (error) {
+    } catch (error: any) {
       console.log(error);
+      setError(error.message);
     }
   };
 
@@ -50,6 +54,9 @@ const Login = () => {
           onChangeText={setPassword}
           className="w-full bg-white/10 text-white px-4 py-4 rounded-lg mb-6"
         />
+        {error && (
+          <Text className="text-red-400 mb-4 text-center">{error}</Text>
+        )}
 
         <Pressable
           onPress={handleLogin}

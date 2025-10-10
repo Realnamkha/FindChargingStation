@@ -1,6 +1,7 @@
-import React, { createContext, useState, ReactNode } from "react";
+import React, { createContext, useState, ReactNode, useEffect } from "react";
 import { account } from "../lib/appwrite";
 import { ID } from "react-native-appwrite";
+import { useRouter } from "expo-router";
 
 // Define the shape of the user
 type User = {
@@ -12,6 +13,7 @@ type User = {
 // Define the context value type
 interface UserContextType {
   user: User | null;
+  authChecked: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (
     fullName: string,
@@ -31,7 +33,9 @@ interface UserProviderProps {
 }
 
 export function UserProvider({ children }: UserProviderProps) {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
 
   // LOGIN
   async function login(email: string, password: string): Promise<void> {
@@ -43,8 +47,9 @@ export function UserProvider({ children }: UserProviderProps) {
         fullName: response.name,
         email: response.email,
       });
-    } catch (error) {
-      console.error("Login failed:", error);
+      router.replace("/");
+    } catch (error: any) {
+      throw Error(error.message);
     }
   }
 
@@ -67,8 +72,10 @@ export function UserProvider({ children }: UserProviderProps) {
         fullName: newUser.name,
         email: newUser.email,
       });
-    } catch (error) {
+      router.replace("/");
+    } catch (error: any) {
       console.error("Registration failed:", error);
+      throw Error(error);
     }
   }
 
@@ -82,8 +89,29 @@ export function UserProvider({ children }: UserProviderProps) {
     }
   }
 
+  async function getInitialUserValue() {
+    try {
+      const response = await account.get();
+      setUser({
+        id: response.$id,
+        fullName: response.name,
+        email: response.email,
+      });
+    } catch (error) {
+      setUser(null);
+    } finally {
+      setAuthChecked(true);
+    }
+  }
+
+  useEffect(() => {
+    getInitialUserValue();
+  }, []);
+
   return (
-    <UserContext.Provider value={{ user, login, register, logout }}>
+    <UserContext.Provider
+      value={{ user, login, register, logout, authChecked }}
+    >
       {children}
     </UserContext.Provider>
   );

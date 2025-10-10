@@ -15,16 +15,19 @@ const Register = () => {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   const { user, register } = useUser();
 
   const handleRegister = async () => {
+    setError(null);
     try {
       await register(fullName, email, password);
       console.log("Current user is:", user);
       // later -> send this data to your backend API
-    } catch (error) {
+    } catch (error: any) {
       console.log(error);
+      setError(error.message);
     }
   };
 
@@ -60,6 +63,9 @@ const Register = () => {
           onChangeText={setPassword}
           className="w-full bg-white/10 text-white px-4 py-3 rounded-lg mb-6"
         />
+        {error && (
+          <Text className="text-red-400 mb-4 text-center">{error}</Text>
+        )}
 
         <Pressable
           onPress={handleRegister}

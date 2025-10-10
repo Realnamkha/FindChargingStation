@@ -1,9 +1,15 @@
+import { useUser } from "../hooks/useUser";
 import { Redirect } from "expo-router";
 
 export default function Index() {
-  const isLoggedIn = true; // 👈 Replace with real auth check (AsyncStorage, Zustand, Supabase, etc.)
+  const { user, authChecked } = useUser();
 
-  if (isLoggedIn) {
+  // Wait until auth check is complete
+  if (!authChecked) {
+    return null; // or a loading screen/spinner
+  }
+
+  if (user) {
     return <Redirect href="/(dashboard)" />;
   } else {
     return <Redirect href="/(auth)/login" />;
