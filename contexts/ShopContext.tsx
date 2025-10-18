@@ -2,16 +2,19 @@ import React, { createContext, useState, ReactNode } from "react";
 import { databases } from "../lib/appwrite";
 import { ID, Permission, Role } from "react-native-appwrite";
 import { useUser } from "../hooks/useUser";
+import { storage } from "../lib/appwrite";
+import * as FileSystem from "expo-file-system";
 
 const DATABASE_ID = "68e8db3500216c53897a";
 const TABLE_ID = "items";
-
+const BUCKET_ID = "68f3a86d002587148ec0";
 // 1️⃣ Item type
 export interface ShopItem {
   userId?: string;
   $id: string; // Appwrite document ID
   name: string;
   price: number;
+  imageId?: string;
 }
 
 // 2️⃣ Context type
@@ -68,26 +71,64 @@ export function ShopProvider({ children }: ShopProviderProps) {
     }
   }
 
-  // Create a new item
-  async function createItem(data: Omit<ShopItem, "$id" | "userId">) {
+  async function createItem(
+    data: Omit<ShopItem, "$id" | "userId" | "imageUrl"> & { imageUri?: string }
+  ) {
     try {
+      let imageId: string | undefined;
+
+      // Upload image if provided
+      if (data.imageUri) {
+        const fileName =
+          data.imageUri.split("/").pop() || `image-${Date.now()}.jpg`;
+
+        const fileInfo = await FileSystem.getInfoAsync(fileName);
+        if (!fileInfo.exists || !fileInfo.size) {
+          throw new Error("File does not exist or has size 0");
+        }
+
+        // Appwrite expects a number for `size`
+        const fileSize = Number(fileInfo.size);
+
+        const file = {
+          uri: data.imageUri,
+          name: fileName,
+          type: "image/jpeg",
+          size: fileSize, // ✅ Required by Appwrite
+        };
+
+        const uploadedFile = await storage.createFile(
+          BUCKET_ID,
+          ID.unique(),
+          file
+        );
+        imageId = uploadedFile.$id; // ✅ store file ID
+      }
+
+      // Create document
       const doc = await databases.createDocument(
         DATABASE_ID,
         TABLE_ID,
         ID.unique(),
-        { ...data, userId: user?.id }, // add creator's ID
+        {
+          name: data.name,
+          price: data.price,
+          userId: user?.id,
+          imageId: imageId,
+        },
         [
-          Permission.read(Role.any()), // everyone can read
-          Permission.update(Role.team("ADMIN_TEAM_ID")), // only admins
-          Permission.delete(Role.team("ADMIN_TEAM_ID")), // only admins
+          Permission.read(Role.any()),
+          Permission.update(Role.team("ADMIN_TEAM_ID")),
+          Permission.delete(Role.team("ADMIN_TEAM_ID")),
         ]
       );
 
       const newItem: ShopItem = {
         $id: doc.$id,
-        name: (doc as any).name as string,
-        price: (doc as any).price as number,
-        userId: (doc as any).userId as string,
+        name: doc.name as string,
+        price: doc.price as number,
+        userId: doc.userId as string,
+        imageId: doc.imageUrl as string,
       };
 
       setItems((prev) => [...prev, newItem]);
