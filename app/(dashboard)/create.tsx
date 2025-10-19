@@ -68,6 +68,11 @@ const CreateItemScreen: React.FC = () => {
       return;
     }
 
+    if (!imageUri) {
+      Alert.alert("Missing image", "Please select an image for the item.");
+      return;
+    }
+
     try {
       setUploading(true);
       const imageId = await uploadImage();
@@ -75,7 +80,7 @@ const CreateItemScreen: React.FC = () => {
       await createItem({
         name,
         price: Number(price),
-        imageId: imageId ?? undefined, // pass file ID
+        imageUri, // pass image URI
       });
 
       Alert.alert("Success", "Item created successfully!");

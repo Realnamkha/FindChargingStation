@@ -1,9 +1,9 @@
-import React, { createContext, useState, ReactNode } from "react";
+import React, { createContext, useState, ReactNode, useEffect } from "react";
 import { databases } from "../lib/appwrite";
 import { ID, Permission, Role } from "react-native-appwrite";
 import { useUser } from "../hooks/useUser";
 import { storage } from "../lib/appwrite";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 
 const DATABASE_ID = "68e8db3500216c53897a";
 const TABLE_ID = "items";
@@ -22,7 +22,9 @@ interface ShopsContextType {
   items: ShopItem[];
   fetchItems: () => Promise<void>;
   fetchItemById: (id: string) => Promise<ShopItem | null>;
-  createItem: (data: Omit<ShopItem, "$id">) => Promise<void>;
+  createItem: (
+    data: Omit<ShopItem, "$id" | "userId" | "imageId"> & { imageUri: string }
+  ) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
 }
 
@@ -42,13 +44,17 @@ export function ShopProvider({ children }: ShopProviderProps) {
   async function fetchItems() {
     try {
       const response = await databases.listDocuments(DATABASE_ID, TABLE_ID);
-      // Map DefaultDocument[] to ShopItem[]
+
       const shopItems: ShopItem[] = response.documents.map((doc) => ({
         $id: doc.$id,
-        user: user?.id,
+        userId: doc.userId as string,
         name: doc.name as string,
         price: doc.price as number,
+        imageId: doc.imageId as string | undefined, // optional
+        imageUrl: doc.imageUrl as string | undefined, // optional
       }));
+
+      console.log(shopItems);
       setItems(shopItems);
     } catch (error) {
       console.error("Error fetching items:", (error as Error).message);
@@ -72,68 +78,51 @@ export function ShopProvider({ children }: ShopProviderProps) {
   }
 
   async function createItem(
-    data: Omit<ShopItem, "$id" | "userId" | "imageUrl"> & { imageUri?: string }
+    data: Omit<ShopItem, "$id" | "userId" | "imageUrl"> & { imageUri: string } // required
   ) {
     try {
-      let imageId: string | undefined;
+      const fileName =
+        data.imageUri.split("/").pop() || `image-${Date.now()}.jpg`;
 
-      // Upload image if provided
-      if (data.imageUri) {
-        const fileName =
-          data.imageUri.split("/").pop() || `image-${Date.now()}.jpg`;
+      const fileInfo = await FileSystem.getInfoAsync(data.imageUri);
+      if (!fileInfo.exists || !fileInfo.size)
+        throw new Error("File does not exist or has size 0");
 
-        const fileInfo = await FileSystem.getInfoAsync(fileName);
-        if (!fileInfo.exists || !fileInfo.size) {
-          throw new Error("File does not exist or has size 0");
-        }
+      const file = {
+        uri: data.imageUri,
+        name: fileName,
+        type: "image/jpeg",
+        size: Number(fileInfo.size),
+      };
 
-        // Appwrite expects a number for `size`
-        const fileSize = Number(fileInfo.size);
+      const uploadedFile = await storage.createFile(
+        BUCKET_ID,
+        ID.unique(),
+        file
+      );
+      const imageId = uploadedFile.$id;
 
-        const file = {
-          uri: data.imageUri,
-          name: fileName,
-          type: "image/jpeg",
-          size: fileSize, // ✅ Required by Appwrite
-        };
+      if (!user?.id) throw new Error("User not authenticated");
 
-        const uploadedFile = await storage.createFile(
-          BUCKET_ID,
-          ID.unique(),
-          file
-        );
-        imageId = uploadedFile.$id; // ✅ store file ID
-      }
-
-      // Create document
       const doc = await databases.createDocument(
         DATABASE_ID,
         TABLE_ID,
         ID.unique(),
         {
           name: data.name,
-          price: data.price,
-          userId: user?.id,
-          imageId: imageId,
+          price: Number(data.price), // ensure number
+          imageId,
         },
-        [
-          Permission.read(Role.any()),
-          Permission.update(Role.team("ADMIN_TEAM_ID")),
-          Permission.delete(Role.team("ADMIN_TEAM_ID")),
-        ]
+        [Permission.read(Role.any()), Permission.write(Role.user(user.id))]
       );
 
-      const newItem: ShopItem = {
-        $id: doc.$id,
-        name: doc.name as string,
-        price: doc.price as number,
-        userId: doc.userId as string,
-        imageId: doc.imageUrl as string,
-      };
-
-      setItems((prev) => [...prev, newItem]);
+      setItems((prev) => [
+        ...prev,
+        { $id: doc.$id, ...data, userId: user.id, imageId },
+      ]);
     } catch (error) {
       console.error("Error creating item:", (error as Error).message);
+      throw error; // so your screen can show Alert
     }
   }
 
@@ -146,6 +135,14 @@ export function ShopProvider({ children }: ShopProviderProps) {
       console.error("Error deleting item:", (error as Error).message);
     }
   }
+
+  useEffect(() => {
+    if (user) {
+      fetchItems();
+    } else {
+      setItems([]);
+    }
+  }, [user]);
 
   return (
     <ShopsContext.Provider
