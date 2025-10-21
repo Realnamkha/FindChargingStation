@@ -50,8 +50,7 @@ export function ShopProvider({ children }: ShopProviderProps) {
         userId: doc.userId as string,
         name: doc.name as string,
         price: doc.price as number,
-        imageId: doc.imageId as string | undefined, // optional
-        imageUrl: doc.imageUrl as string | undefined, // optional
+        imageId: doc.imageId as string | undefined, // optionals
       }));
 
       console.log(shopItems);
