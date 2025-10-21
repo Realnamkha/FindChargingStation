@@ -65,6 +65,21 @@ const DashboardLayout = () => {
             ),
           }}
         />
+        <Tabs.Screen
+          name="checkout"
+          options={{
+            tabBarButton: () => null, // hides the tab
+            headerShown: false, // optional, if you still want header
+          }}
+        />
+
+        <Tabs.Screen
+          name="create"
+          options={{
+            tabBarButton: () => null, // hides the tab
+            headerShown: true,
+          }}
+        />
       </Tabs>
     </UserOnly>
   );

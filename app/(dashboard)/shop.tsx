@@ -2,11 +2,14 @@ import React, { useEffect, useContext } from "react";
 import { View, Text, FlatList, TouchableOpacity } from "react-native";
 import { ShopsContext } from "../../contexts/ShopContext";
 import Postcard from "../../components/PostCard";
+import { useCart } from "../../hooks/useCart";
+import { router } from "expo-router";
 
 const BUCKET_ID = "68f3a86d002587148ec0";
 
 const Shop = () => {
   const context = useContext(ShopsContext);
+  const { addToCart, totalItems, totalPrice } = useCart();
   if (!context) return null;
 
   const { items, fetchItems } = context;
@@ -20,7 +23,13 @@ const Shop = () => {
       item={item}
       bucketId={BUCKET_ID}
       onPress={() => console.log("Pressed:", item.name)}
-      onAddToCart={() => console.log("Added to cart:", item.name)}
+      onAddToCart={() =>
+        addToCart({
+          $id: item.$id,
+          name: item.name,
+          price: Number(item.price),
+        })
+      }
     />
   );
 
@@ -42,9 +51,12 @@ const Shop = () => {
 
       {/* Floating Checkout Button */}
       <View className="absolute bottom-6 left-4 right-4 bg-blue-600/40 rounded-full p-1 shadow-lg">
-        <TouchableOpacity className="py-4 items-center">
-          <Text className="text-white text-lg font-bold">
-            Checkout ({items.length} items)
+        <TouchableOpacity
+          onPress={() => router.push("/checkout")}
+          className="bg-blue-600/60 py-4 rounded-full items-center shadow-lg"
+        >
+          <Text className="text-white font-bold text-lg">
+            Checkout ({totalItems} items - ${totalPrice.toFixed(2)})
           </Text>
         </TouchableOpacity>
       </View>

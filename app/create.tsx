@@ -10,8 +10,8 @@ import {
 } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
-import { storage } from "../../lib/appwrite";
-import { useItems } from "../../hooks/useItems";
+import { storage } from "../lib/appwrite";
+import { useItems } from "../hooks/useItems";
 import { ID } from "react-native-appwrite";
 
 const BUCKET_ID = "68f3a86d002587148ec0";
